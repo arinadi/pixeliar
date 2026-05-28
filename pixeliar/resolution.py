@@ -72,6 +72,7 @@ def apply_delta_pipeline(input_full, process_fn, config, logger):
     process_fn: callable(img_small, config, logger) → img_small_output
     Returns: output at original resolution.
     """
+    import time
     h, w = input_full.shape[:2]
     long_edge = max(h, w)
     inference_res = config.get("inference_resolution", 512)
@@ -80,22 +81,27 @@ def apply_delta_pipeline(input_full, process_fn, config, logger):
     if long_edge > inference_res:
         input_small, scale = resize_long_edge(input_full, inference_res)
         logger.p("UPSAMPLE", f"delta {input_small.shape[1]}x{input_small.shape[0]} "
-                  f"→ {w}x{h} (guided filter)", indent=1)
+                  f"→ {w}x{h}", indent=1)
     else:
-        # Image already small enough — process directly
         output = process_fn(input_full, config, logger)
         return np.clip(output, 0, 1)
 
     # Step 2: Run ML on small image
+    t0 = time.time()
     output_small = process_fn(input_small, config, logger)
+    ml_ms = int((time.time() - t0) * 1000)
+    logger.p("DELTA", f"ML done in {ml_ms}ms", indent=1)
 
     # Step 3: Compute delta at small resolution
     delta_small = output_small.astype(np.float32) - input_small.astype(np.float32)
 
     # Step 4: Upsample delta
+    t0 = time.time()
     guide_gray = cv2.cvtColor(input_full, cv2.COLOR_RGB2GRAY) if input_full.ndim == 3 \
         else input_full
     delta_full = upsample_delta(delta_small, guide_gray, input_full.shape)
+    up_ms = int((time.time() - t0) * 1000)
+    logger.p("DELTA", f"Upsample done in {up_ms}ms", indent=1)
 
     # Step 5: Apply delta to original
     result = np.clip(input_full.astype(np.float32) + delta_full, 0, 1)
