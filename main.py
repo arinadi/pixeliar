@@ -21,13 +21,20 @@ from pixeliar.idle_monitor import IdleMonitor
 
 
 # ── CONFIG (edit before run) ────────────────────────────
+# Paste your Google Drive folder URL here
+SOURCE_FOLDER_URL = "https://drive.google.com/drive/folders/MASUKKAN_ID_FOLDER"  #@param {type:"string"}
+# Name of the result folder created in your Drive
+RESULT_FOLDER_NAME = "Pixeliar Enhanced"  #@param {type:"string"}
+# Output JPEG quality (85-98 recommended)
+JPEG_QUALITY = 95  #@param {type:"integer"}
+
 CONFIG = {
     # INPUT
-    "source_gdrive_url": "https://drive.google.com/drive/folders/MASUKKAN_ID_FOLDER",
+    "source_gdrive_url": SOURCE_FOLDER_URL,
     "recursive_folder_scan": False,
     # OUTPUT
     "target_mydrive_path": "MyDrive/pixeliar/enhanced",
-    "result_folder_name": "Pixeliar Enhanced",
+    "result_folder_name": RESULT_FOLDER_NAME,
     # TRIAGE THRESHOLDS
     "thresholds": {
         "dark_lum": 60,
@@ -43,7 +50,7 @@ CONFIG = {
     "tiling_threshold": 1500,
     "tile_overlap": 64,
     # OUTPUT
-    "jpeg_output_quality": 95,
+    "jpeg_output_quality": JPEG_QUALITY,
     "csrnet_strength": 0.85,
     "save_thumbnails": False,
     # RUNTIME
