@@ -54,28 +54,28 @@ Set runtime to **T4 GPU**:
 
 > 💡 **No secrets needed.** All ML runs locally on T4 GPU.
 
-### Step 2: Run 🛎️
+### Step 2: Paste & Run 🛎️
 
-Copy and run this cell. Your personal photo editor will be with you in seconds:
+Copy and run this cell. Fill in your Drive folder URL and result folder name:
 
 ```python
 # @title ✨ Start pixeliar
+
+# ── Fill these in ──────────────────────────────────────
+SOURCE_FOLDER_URL = "https://drive.google.com/drive/folders/MASUKKAN_ID_FOLDER"  #@param {type:"string"}
+RESULT_FOLDER_NAME = "Pixeliar Enhanced"  #@param {type:"string"}
+JPEG_QUALITY = 95  #@param {type:"integer"}
+
+# ── Launch pipeline ────────────────────────────────────
+import os
+os.environ["PHOTON_SOURCE_URL"] = SOURCE_FOLDER_URL
+os.environ["PHOTON_RESULT_NAME"] = RESULT_FOLDER_NAME
+os.environ["PHOTON_JPEG_QUALITY"] = str(JPEG_QUALITY)
+
 !curl -sL https://raw.githubusercontent.com/arinadi/pixeliar/main/runner.py -o runner.py && python runner.py
 ```
 
-### Step 3: Edit CONFIG 📝
-
-When prompted, edit the `CONFIG` dict at the top of `main.py`:
-
-```python
-CONFIG = {
-    "source_gdrive_url": "https://drive.google.com/drive/folders/YOUR_FOLDER_ID",
-    "result_folder_name": "Pixeliar Enhanced",
-    ...
-}
-```
-
-### Step 4: Grab Your Coffee ☕
+### Step 3: Grab Your Coffee ☕
 
 The pipeline will:
 1. Clone the repo & load models (~30s)

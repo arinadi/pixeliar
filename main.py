@@ -278,10 +278,12 @@ def run_photon(config=None):
 
 
 if __name__ == "__main__":
-    # Allow config override via env
+    # Allow config override via env (injected from Colab form)
     if os.environ.get("PHOTON_SOURCE_URL"):
         CONFIG["source_gdrive_url"] = os.environ["PHOTON_SOURCE_URL"]
     if os.environ.get("PHOTON_RESULT_NAME"):
         CONFIG["result_folder_name"] = os.environ["PHOTON_RESULT_NAME"]
+    if os.environ.get("PHOTON_JPEG_QUALITY"):
+        CONFIG["jpeg_output_quality"] = int(os.environ["PHOTON_JPEG_QUALITY"])
 
     run_photon()
