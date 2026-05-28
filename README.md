@@ -47,45 +47,23 @@ Your Google Drive is full of photos. Dark ones. Blue-tinted ones from bad indoor
 
 ## 🚀 Quick Start — One-Click Enhancement
 
-### Step 1: Prepare Your Secrets 🔑
-
-In Colab's **Secrets** tab (🔑 icon on the left), add:
-
-| Secret | Required | Purpose |
-|--------|----------|---------|
-| `MIMO_API_KEY` | Optional | Cloud fallback if local ML fails |
-| `GITHUB_TOKEN` | Optional | Faster downloads from private repos |
-
-> 💡 **No secrets needed** for basic usage — all ML runs locally on T4 GPU.
-
-### Step 2: Choose Your Runtime 🔥
+### Step 1: Choose Your Runtime 🔥
 
 Set runtime to **T4 GPU**:
 `Runtime > Change runtime type > T4 GPU`
 
-### Step 3: Run 🛎️
+> 💡 **No secrets needed.** All ML runs locally on T4 GPU.
+
+### Step 2: Run 🛎️
 
 Copy and run this cell. Your personal photo editor will be with you in seconds:
 
 ```python
 # @title ✨ Start pixeliar
-import os, subprocess, sys
-
-# 1. Load Secrets (optional)
-try:
-    from google.colab import userdata
-    for key in ['MIMO_API_KEY', 'GITHUB_TOKEN']:
-        try:
-            val = userdata.get(key)
-            if val: os.environ[key] = str(val)
-        except: pass
-except: pass
-
-# 2. Launch pipeline
 !curl -sL https://raw.githubusercontent.com/arinadi/pixeliar/main/runner.py -o runner.py && python runner.py
 ```
 
-### Step 4: Edit CONFIG 📝
+### Step 3: Edit CONFIG 📝
 
 When prompted, edit the `CONFIG` dict at the top of `main.py`:
 
@@ -97,7 +75,7 @@ CONFIG = {
 }
 ```
 
-### Step 5: Grab Your Coffee ☕
+### Step 4: Grab Your Coffee ☕
 
 The pipeline will:
 1. Clone the repo & load models (~30s)

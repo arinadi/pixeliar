@@ -32,7 +32,7 @@ def main():
     t0 = time.time()
 
     # ── Step 1: Clone or update ──────────────────────────
-    step("[1/4] Clone or update repo")
+    step("[1/3] Clone or update repo")
 
     if os.path.exists(os.path.join(REPO_DIR, ".git")):
         print(f"  Repo exists at {REPO_DIR}, updating...", flush=True)
@@ -47,7 +47,7 @@ def main():
     print(f"  ✅ Repo ready at {REPO_DIR}", flush=True)
 
     # ── Step 2: Install deps ────────────────────────────
-    step("[2/4] Install dependencies")
+    step("[2/3] Install dependencies")
 
     req_file = os.path.join(REPO_DIR, "requirements.txt")
     if os.path.exists(req_file):
@@ -59,26 +59,8 @@ def main():
     else:
         print("  ⚠️  No requirements.txt found, skipping pip install", flush=True)
 
-    # ── Step 3: Load Colab secrets ──────────────────────
-    step("[3/4] Load Colab secrets")
-
-    secrets_loaded = 0
-    try:
-        from google.colab import userdata
-        for key in ("MIMO_API_KEY", "GITHUB_TOKEN", "ANTHROPIC_API_KEY"):
-            val = userdata.get(key, "")
-            if val:
-                os.environ[key] = val
-                secrets_loaded += 1
-                print(f"  🔑 {key} loaded", flush=True)
-    except ImportError:
-        print("  ℹ️  Not in Colab — secrets skipped", flush=True)
-
-    if secrets_loaded == 0:
-        print("  ℹ️  No secrets found (pipeline runs without cloud API)", flush=True)
-
-    # ── Step 4: Launch start.py ─────────────────────────
-    step("[4/4] Launch pipeline")
+    # ── Step 3: Launch start.py ─────────────────────────
+    step("[3/3] Launch pipeline")
 
     start_py = os.path.join(REPO_DIR, "start.py")
     if not os.path.exists(start_py):
