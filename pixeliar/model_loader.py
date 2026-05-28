@@ -82,15 +82,17 @@ def _load_retinex(config, logger):
     repo_dir = os.path.join(config["weights_dir"], "Retinexformer")
     if not os.path.exists(repo_dir):
         import subprocess
-        subprocess.run(["pip", "install", "-q", "basicsr"], check=True)
         subprocess.run([
             "git", "clone", "--depth", "1",
             "https://github.com/caiyuanhao1998/Retinexformer",
             repo_dir,
         ], check=True)
+        # Install basicsr from repo (not pip) for compatibility
+        subprocess.run([sys.executable, "setup.py", "develop", "--no_cuda_ext"],
+                       cwd=repo_dir, check=True, capture_output=True)
 
     sys.path.insert(0, repo_dir)
-    from basicsr.models.archs.Retinexformer_arch import Retinexformer
+    from basicsr.archs.retinexformer_arch import Retinexformer
 
     model = Retinexformer(
         in_channels=3, out_channels=3, n_feat=40, stage=1,
