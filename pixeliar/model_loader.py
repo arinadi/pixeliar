@@ -87,12 +87,14 @@ def _load_retinex(config, logger):
             "https://github.com/caiyuanhao1998/Retinexformer",
             repo_dir,
         ], check=True)
-        # Install basicsr from repo (not pip) for compatibility
-        subprocess.run([sys.executable, "setup.py", "develop", "--no_cuda_ext"],
-                       cwd=repo_dir, check=True, capture_output=True)
 
-    sys.path.insert(0, repo_dir)
-    from basicsr.archs.retinexformer_arch import Retinexformer
+    # Import arch directly by file path (bypasses broken basicsr package registration)
+    import importlib.util
+    arch_path = os.path.join(repo_dir, "basicsr", "archs", "retinexformer_arch.py")
+    spec = importlib.util.spec_from_file_location("retinexformer_arch", arch_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    Retinexformer = mod.Retinexformer
 
     model = Retinexformer(
         in_channels=3, out_channels=3, n_feat=40, stage=1,
