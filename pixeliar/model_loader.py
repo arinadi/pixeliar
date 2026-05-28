@@ -102,8 +102,14 @@ def _load_retinex(config, logger):
     ).cuda().eval()
     weight_path = os.path.join(repo_dir, "LOL_v1.pth")
     if not os.path.exists(weight_path):
-        import gdown
-        gdown.download(id="1AGbZBZq0BQs0cGKU3HnWxhKjNtQG9Yk", output=weight_path, quiet=True)
+        import subprocess
+        file_id = "1AGbZBZq0BQs0cGKU3HnWxhKjNtQG9Yk"
+        # wget with cookie handling bypasses Google Drive rate limits
+        subprocess.run([
+            "wget", "-q", "--no-check-certificate",
+            f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t",
+            "-O", weight_path,
+        ], check=True)
     model.load_state_dict(torch.load(weight_path, map_location="cuda")["params"])
     return model
 
