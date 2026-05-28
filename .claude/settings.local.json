@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context-mode__ctx_execute",
+      "Bash(powershell *)",
+      "Bash(mkdir -p ~/.claude/skills)",
+      "Bash(git clone *)",
+      "Bash(git init *)",
+      "Bash(git branch *)",
+      "Bash(gh repo *)",
+      "Bash(git add *)",
+      "Bash(cat .gitignore)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

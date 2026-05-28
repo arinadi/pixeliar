@@ -1,0 +1,16 @@
+# OS
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets
+*.env
+secrets/
