@@ -90,13 +90,13 @@ def _load_retinex(config, logger):
 
     # Import arch directly by file path (bypasses broken basicsr package registration)
     import importlib.util
-    arch_path = os.path.join(repo_dir, "basicsr", "archs", "retinexformer_arch.py")
-    spec = importlib.util.spec_from_file_location("retinexformer_arch", arch_path)
+    arch_path = os.path.join(repo_dir, "basicsr", "models", "archs", "RetinexFormer_arch.py")
+    spec = importlib.util.spec_from_file_location("RetinexFormer_arch", arch_path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    Retinexformer = mod.Retinexformer
+    RetinexFormer = mod.RetinexFormer
 
-    model = Retinexformer(
+    model = RetinexFormer(
         in_channels=3, out_channels=3, n_feat=40, stage=1,
         num_blocks=[1, 2, 2],
     ).cuda().eval()
