@@ -4,6 +4,7 @@ Hybrid pipeline: Classical CV (full res) + ML (512px, severe cases only).
 """
 
 import numpy as np
+import torch
 from .triage import TriageEngine
 from .colorgrade import grade
 from .wrappers import (
@@ -37,15 +38,22 @@ def orchestrate(img_np, triage, config, models, logger):
         steps_applied.append("Retinexformer")
 
     # ── Phase 3: ML Denoise / Deblur (only if flagged) ──
-    if triage["noise_flag"] and "naf_denoise" in models:
-        process_fn = lambda img, cfg, log: run_nafnet_denoise(img, models["naf_denoise"], cfg, log)
-        result = apply_delta_pipeline(result, process_fn, config, logger)
-        steps_applied.append("NAFNet-SIDD")
+    # Disable cuDNN to avoid hang on Colab's cuDNN version mismatch
+    torch.backends.cudnn.enabled = False
+    try:
+        if triage["noise_flag"] and "naf_denoise" in models:
+            process_fn = lambda img, cfg, log: run_nafnet_denoise(img, models["naf_denoise"], cfg, log)
+            result = apply_delta_pipeline(result, process_fn, config, logger)
+            steps_applied.append("NAFNet-SIDD")
 
-    if triage["blur_flag"] and "naf_deblur" in models:
-        process_fn = lambda img, cfg, log: run_nafnet_deblur(img, models["naf_deblur"], cfg, log)
-        result = apply_delta_pipeline(result, process_fn, config, logger)
-        steps_applied.append("NAFNet-REDS")
+        if triage["blur_flag"] and "naf_deblur" in models:
+            process_fn = lambda img, cfg, log: run_nafnet_deblur(img, models["naf_deblur"], cfg, log)
+            result = apply_delta_pipeline(result, process_fn, config, logger)
+            steps_applied.append("NAFNet-REDS")
+    except Exception as e:
+        logger.p("WARN", f"NAFNet failed (skipped): {e}", indent=1)
+    finally:
+        torch.backends.cudnn.enabled = True
 
     # ── Phase 4: Final Polish (full res) ─────────────────
     post_triage = TriageEngine(config).analyze(result)
