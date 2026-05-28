@@ -102,14 +102,29 @@ def _load_retinex(config, logger):
     ).cuda().eval()
     weight_path = os.path.join(repo_dir, "LOL_v1.pth")
     if not os.path.exists(weight_path):
-        import subprocess
-        file_id = "1AGbZBZq0BQs0cGKU3HnWxhKjNtQG9Yk"
-        # wget with cookie handling bypasses Google Drive rate limits
-        subprocess.run([
-            "wget", "-q", "--no-check-certificate",
-            f"https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t",
-            "-O", weight_path,
-        ], check=True)
+        # Use Drive API to find and download from shared folder
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseDownload
+        from google.auth import default
+        creds, _ = default()
+        svc = build("drive", "v3", credentials=creds)
+
+        # Search in the Retinexformer shared weights folder
+        folder_id = "1ynK5hfQachzc8y96ZumhkPPDXzHJwaQV"
+        results = svc.files().list(
+            q=f"'{folder_id}' in parents and name contains 'LOL_v1' and trashed=false",
+            fields="files(id, name)",
+        ).execute()
+        files = results.get("files", [])
+        if not files:
+            raise FileNotFoundError("LOL_v1.pth not found in Retinexformer shared folder")
+
+        request = svc.files().get_media(fileId=files[0]["id"])
+        with open(weight_path, "wb") as fh:
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
     model.load_state_dict(torch.load(weight_path, map_location="cuda")["params"])
     return model
 
