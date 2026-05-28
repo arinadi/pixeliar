@@ -102,6 +102,20 @@ class GDriveIO:
         ).execute()
 
     def create_folder(self, name, parent_id=None):
+        """Create folder, or reuse existing if same name exists."""
+        # Check if folder already exists
+        q = f"name='{name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        if parent_id:
+            q += f" and '{parent_id}' in parents"
+        existing = self._retry(
+            self.svc.files().list, q=q, fields="files(id, name, webViewLink)",
+        ).execute()
+        files = existing.get("files", [])
+        if files:
+            f = files[0]
+            return f["id"], f.get("webViewLink", "")
+
+        # Create new folder
         meta = {"name": name, "mimeType": "application/vnd.google-apps.folder"}
         if parent_id:
             meta["parents"] = [parent_id]
