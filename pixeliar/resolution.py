@@ -68,7 +68,9 @@ def upsample_delta(delta_small, guide_gray_full, target_shape):
 
 
 def apply_delta_pipeline(input_full, process_fn, config, logger):
-    """Run ML at low-res, compute delta, upsample, apply to original.
+    """Run ML at low-res, blend with original at full-res.
+    Frequency-separated: ML only affects low-freq (tone/color),
+    original high-freq (detail/texture) is always preserved.
     process_fn: callable(img_small, config, logger) → img_small_output
     Returns: output at original resolution.
     """
@@ -76,33 +78,44 @@ def apply_delta_pipeline(input_full, process_fn, config, logger):
     h, w = input_full.shape[:2]
     long_edge = max(h, w)
     inference_res = config.get("inference_resolution", 512)
+    blend = config.get("ml_blend", 0.4)
 
-    # Step 1: Downscale
-    if long_edge > inference_res:
-        input_small, scale = resize_long_edge(input_full, inference_res)
-        logger.p("UPSAMPLE", f"delta {input_small.shape[1]}x{input_small.shape[0]} "
-                  f"→ {w}x{h}", indent=1)
-    else:
+    if long_edge <= inference_res:
         output = process_fn(input_full, config, logger)
         return np.clip(output, 0, 1)
 
-    # Step 2: Run ML on small image
+    # Downscale
+    input_small, scale = resize_long_edge(input_full, inference_res)
+    logger.p("INFERENCE", f"{input_small.shape[1]}x{input_small.shape[0]} "
+              f"→ {w}x{h} (blend={blend})", indent=1)
+
+    # Run ML on small image
     t0 = time.time()
     output_small = process_fn(input_small, config, logger)
     ml_ms = int((time.time() - t0) * 1000)
-    logger.p("DELTA", f"ML done in {ml_ms}ms", indent=1)
 
-    # Step 3: Compute delta at small resolution
-    delta_small = output_small.astype(np.float32) - input_small.astype(np.float32)
+    # Frequency separation on full-res original
+    input_f32 = input_full.astype(np.float32)
+    sigma = max(w, h) / 60  # adaptive blur radius
+    guide_gray = cv2.cvtColor(input_full, cv2.COLOR_RGB2GRAY)
+    guide_u8 = (guide_gray * 255).astype(np.uint8) if guide_gray.max() <= 1.0 \
+        else guide_gray.astype(np.uint8)
+    blurred = cv2.GaussianBlur(guide_u8, (0, 0), sigma).astype(np.float32) / 255.0
+    low_freq = blurred[:, :, np.newaxis] if input_f32.ndim == 3 else blurred
+    high_freq = input_f32 - low_freq
 
-    # Step 4: Upsample delta
-    t0 = time.time()
-    guide_gray = cv2.cvtColor(input_full, cv2.COLOR_RGB2GRAY) if input_full.ndim == 3 \
-        else input_full
-    delta_full = upsample_delta(delta_small, guide_gray, input_full.shape)
-    up_ms = int((time.time() - t0) * 1000)
-    logger.p("DELTA", f"Upsample done in {up_ms}ms", indent=1)
+    # Upsample ML output to full-res, extract its low-freq
+    ml_full = cv2.resize(output_small, (w, h), interpolation=cv2.INTER_LINEAR)
+    ml_full_f32 = ml_full.astype(np.float32) if ml_full.dtype != np.float32 else ml_full
+    ml_low = cv2.GaussianBlur(
+        (ml_full_f32 * 255).astype(np.uint8), (0, 0), sigma
+    ).astype(np.float32) / 255.0
+    if ml_low.ndim == 2 and input_f32.ndim == 3:
+        ml_low = ml_low[:, :, np.newaxis]
 
-    # Step 5: Apply delta to original
-    result = np.clip(input_full.astype(np.float32) + delta_full, 0, 1)
+    # Blend: ML low-freq + original high-freq
+    enhanced_low = (1 - blend) * low_freq + blend * ml_low
+    result = np.clip(enhanced_low + high_freq, 0, 1)
+
+    logger.p("INFERENCE", f"ML {ml_ms}ms", indent=1)
     return result

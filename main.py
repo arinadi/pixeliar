@@ -49,6 +49,7 @@ CONFIG = {
     "inference_resolution": 512,
     "tiling_threshold": 1500,
     "tile_overlap": 64,
+    "ml_blend": 0.4,
     # OUTPUT
     "jpeg_output_quality": JPEG_QUALITY,
     "csrnet_strength": 0.5,
