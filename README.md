@@ -66,7 +66,12 @@ SOURCE_FOLDER_URL = "https://drive.google.com/drive/folders/MASUKKAN_ID_FOLDER" 
 RESULT_FOLDER_NAME = "Pixeliar Enhanced"  #@param {type:"string"}
 JPEG_QUALITY = 95  #@param {type:"integer"}
 
-# ── Launch pipeline ────────────────────────────────────
+# ── Google Drive auth (popup will appear — login first) ──
+from google.colab import auth
+auth.authenticate_user()
+print("✅ Google Drive connected!")
+
+# ── Set config & launch ───────────────────────────────
 import os
 os.environ["PHOTON_SOURCE_URL"] = SOURCE_FOLDER_URL
 os.environ["PHOTON_RESULT_NAME"] = RESULT_FOLDER_NAME

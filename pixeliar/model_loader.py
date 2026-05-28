@@ -8,6 +8,24 @@ import os
 import sys
 import torch
 
+# ── Compatibility patches for Python 3.12+ and newer torchvision ──
+
+# Python 3.12 removed the `imp` module — some ML repos still use it
+if "imp" not in sys.modules:
+    import importlib
+    import types
+    _imp = types.ModuleType("imp")
+    _imp.find_module = lambda *a, **k: None
+    _imp.load_module = lambda *a, **k: None
+    sys.modules["imp"] = _imp
+
+# Retinexformer/basicsr imports torchvision.transforms.functional_tensor which was removed
+try:
+    import torchvision.transforms.functional_tensor
+except ImportError:
+    import torchvision.transforms.functional as _F
+    sys.modules["torchvision.transforms.functional_tensor"] = _F
+
 
 def _count_params(model):
     return sum(p.numel() for p in model.parameters())
@@ -69,15 +87,6 @@ def _load_retinex(config, logger):
             "https://github.com/caiyuanhao1998/Retinexformer",
             repo_dir,
         ], check=True)
-
-    # Patch torchvision.transforms.functional_tensor (removed in newer torchvision)
-    try:
-        import torchvision.transforms.functional as F
-        if not hasattr(F, 'tensor'):
-            import torchvision.transforms.functional_tensor as _ft
-            F.tensor = _ft.to_tensor
-    except ImportError:
-        pass
 
     sys.path.insert(0, repo_dir)
     from basicsr.models.archs.Retinexformer_arch import Retinexformer

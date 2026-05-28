@@ -103,17 +103,17 @@ def run_photon(config=None):
     logger.p("FOLDER", f"Source: {cfg['source_gdrive_url']}")
     logger.p("FOLDER", f"Target: {cfg['target_mydrive_path']}")
 
-    # ── Google Drive auth (must be first — triggers permission popup) ──
+    # ── Google Drive auth ──
+    # Auth MUST happen in the Colab cell (before runner.py),
+    # because os.execv / subprocess loses Colab kernel context.
+    # Here we just build the service from existing credentials.
     drive_svc = None
     try:
-        from google.colab import auth as colab_auth
         from google.auth import default
         from googleapiclient.discovery import build
-        print("\n🔐 Login ke akun Google kamu...")
-        colab_auth.authenticate_user()
         creds, _ = default()
         drive_svc = build("drive", "v3", credentials=creds)
-        print("✅ Google Drive connected!")
+        logger.drive_op("auth", "Google Drive connected")
     except Exception as e:
         logger.p("WARN", f"Drive auth failed: {e}", indent=1)
         logger.p("WARN", "Running in local-only mode", indent=1)
