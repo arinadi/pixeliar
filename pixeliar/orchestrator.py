@@ -66,15 +66,18 @@ def orchestrate(img_np, triage, config, models, logger):
             result = apply_delta_pipeline(result, process_fn, config, logger)
             steps_applied.append("Restormer")
         elif "naf_denoise" in models:
-            result = run_nafnet_denoise(result, models["naf_denoise"], config, logger)
+            process_fn = lambda img, cfg, log: run_nafnet_denoise(img, models["naf_denoise"], cfg, log)
+            result = apply_delta_pipeline(result, process_fn, config, logger)
             steps_applied.append("NAFNet-SIDD")
     elif triage["noise_flag"]:
         if "naf_denoise" in models:
-            result = run_nafnet_denoise(result, models["naf_denoise"], config, logger)
+            process_fn = lambda img, cfg, log: run_nafnet_denoise(img, models["naf_denoise"], cfg, log)
+            result = apply_delta_pipeline(result, process_fn, config, logger)
             steps_applied.append("NAFNet-SIDD")
     elif triage["blur_flag"]:
         if "naf_deblur" in models:
-            result = run_nafnet_deblur(result, models["naf_deblur"], config, logger)
+            process_fn = lambda img, cfg, log: run_nafnet_deblur(img, models["naf_deblur"], cfg, log)
+            result = apply_delta_pipeline(result, process_fn, config, logger)
             steps_applied.append("NAFNet-REDS")
 
     # ── Step 5: Classic Finisher — Post-ML ──────────────
