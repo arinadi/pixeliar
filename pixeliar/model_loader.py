@@ -48,11 +48,13 @@ def _load_iat(config, logger):
             repo_dir,
         ], check=True)
 
-    sys.path.insert(0, repo_dir)
-    from IAT_enhance.model.IAT import IAT
+    # IAT code lives inside IAT_enhance/ subdir
+    iat_dir = os.path.join(repo_dir, "IAT_enhance")
+    sys.path.insert(0, iat_dir)
+    from model.IAT_main import IAT
 
     model = IAT().cuda().eval()
-    weight_path = os.path.join(repo_dir, "IAT_enhance", "weights", "exposure.pth")
+    weight_path = os.path.join(iat_dir, "best_Epoch_lol_v1.pth")
     model.load_state_dict(torch.load(weight_path, map_location="cuda"))
     return model
 
@@ -62,12 +64,20 @@ def _load_retinex(config, logger):
     repo_dir = os.path.join(config["weights_dir"], "Retinexformer")
     if not os.path.exists(repo_dir):
         import subprocess
-        subprocess.run(["pip", "install", "-q", "basicsr"], check=True)
         subprocess.run([
             "git", "clone", "--depth", "1",
             "https://github.com/caiyuanhao1998/Retinexformer",
             repo_dir,
         ], check=True)
+
+    # Patch torchvision.transforms.functional_tensor (removed in newer torchvision)
+    try:
+        import torchvision.transforms.functional as F
+        if not hasattr(F, 'tensor'):
+            import torchvision.transforms.functional_tensor as _ft
+            F.tensor = _ft.to_tensor
+    except ImportError:
+        pass
 
     sys.path.insert(0, repo_dir)
     from basicsr.models.archs.Retinexformer_arch import Retinexformer
@@ -79,7 +89,6 @@ def _load_retinex(config, logger):
     weight_path = os.path.join(repo_dir, "LOL_v1.pth")
     if not os.path.exists(weight_path):
         import gdown
-        # Fallback: download from HuggingFace or Drive
         gdown.download(id="1AGbZBZq0BQs0cGKU3HnWxhKjNtQG9Yk", output=weight_path, quiet=True)
     model.load_state_dict(torch.load(weight_path, map_location="cuda")["params"])
     return model
@@ -96,11 +105,13 @@ def _load_deepwb(config, logger):
             repo_dir,
         ], check=True)
 
-    sys.path.insert(0, repo_dir)
-    from arch import deep_wb_model
+    # DeepWB code lives inside PyTorch/ subdir
+    pytorch_dir = os.path.join(repo_dir, "PyTorch")
+    sys.path.insert(0, pytorch_dir)
+    from arch.deep_wb_model import deepWBNet
 
-    model = deep_wb_model.DeepWBNet().cuda().eval()
-    weight_path = os.path.join(repo_dir, "models", "net_G.pth")
+    model = deepWBNet().cuda().eval()
+    weight_path = os.path.join(pytorch_dir, "models", "net.pth")
     model.load_state_dict(torch.load(weight_path, map_location="cuda"))
     return model
 
@@ -127,8 +138,6 @@ def _load_csrnet(config, logger):
 
 def _load_nafnet(config, logger):
     """NAFNet — denoise + deblur via nafnetlib."""
-    import subprocess
-    subprocess.run(["pip", "install", "-q", "nafnetlib"], check=True)
     from nafnetlib import DenoiseProcessor, DeblurProcessor
 
     model_dir = config.get("nafnet_model_dir", "/content/pixeliar_nafnet_weights")
@@ -147,7 +156,6 @@ def _load_restormer(config, logger):
     repo_dir = os.path.join(config["weights_dir"], "Restormer")
     if not os.path.exists(repo_dir):
         import subprocess
-        subprocess.run(["pip", "install", "-q", "basicsr"], check=True)
         subprocess.run([
             "git", "clone", "--depth", "1",
             "https://github.com/swz30/Restormer",

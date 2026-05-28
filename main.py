@@ -103,21 +103,26 @@ def run_photon(config=None):
     logger.p("FOLDER", f"Source: {cfg['source_gdrive_url']}")
     logger.p("FOLDER", f"Target: {cfg['target_mydrive_path']}")
 
+    # ── Google Drive auth (must be first — triggers permission popup) ──
+    drive_svc = None
+    try:
+        from google.colab import auth as colab_auth
+        from google.auth import default
+        from googleapiclient.discovery import build
+        print("\n🔐 Login ke akun Google kamu...")
+        colab_auth.authenticate_user()
+        creds, _ = default()
+        drive_svc = build("drive", "v3", credentials=creds)
+        print("✅ Google Drive connected!")
+    except Exception as e:
+        logger.p("WARN", f"Drive auth failed: {e}", indent=1)
+        logger.p("WARN", "Running in local-only mode", indent=1)
+
     # ── Hardware detect ──────────────────────────────────
     hw = detect_hardware()
     os.environ["PHOTON_MODE"] = hw["mode"]
     logger.p("MODEL", f"Mode: {hw['mode']}"
              + (f" ({hw['name']}, {hw['vram_gb']}GB)" if hw["name"] else ""))
-
-    # ── Google Drive auth ────────────────────────────────
-    drive_svc = None
-    try:
-        from pixeliar.gdrive import authenticate, GDriveIO
-        drive_svc = authenticate()
-        logger.drive_op("auth", "Google Drive connected")
-    except Exception as e:
-        logger.p("WARN", f"Drive auth failed: {e}", indent=1)
-        logger.p("WARN", "Running in local-only mode", indent=1)
 
     # ── Session ──────────────────────────────────────────
     session = SessionManager()
