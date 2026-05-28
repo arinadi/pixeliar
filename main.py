@@ -51,7 +51,7 @@ CONFIG = {
     "tile_overlap": 64,
     # OUTPUT
     "jpeg_output_quality": JPEG_QUALITY,
-    "csrnet_strength": 0.85,
+    "csrnet_strength": 0.5,
     "save_thumbnails": False,
     # RUNTIME
     "load_restormer": False,

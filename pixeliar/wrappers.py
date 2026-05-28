@@ -189,7 +189,7 @@ def run_restormer(img_np, model, config, logger):
 # ── Module 13: ClassicFinisher — Post-ML Micro-Polish ───
 
 def run_classic_finisher(img_np, triage_post, config, logger):
-    """CLAHE + Unsharp Mask — only if post-ML metrics still below threshold."""
+    """CLAHE + mild sharpening — always applied to restore ML-smoothed detail."""
     result = img_np.copy()
     steps = []
 
@@ -202,13 +202,12 @@ def run_classic_finisher(img_np, triage_post, config, logger):
         result = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB).astype(np.float32) / 255.0
         steps.append("CLAHE")
 
-    if triage_post.get("sharpness_var", 999) < config["thresholds"].get("blur_threshold", 150):
-        blurred = cv2.GaussianBlur(
-            (result * 255).astype(np.uint8), (0, 0), 2.0)
-        sharpened = cv2.addWeighted(
-            (result * 255).astype(np.uint8), 1.5, blurred, -0.5, 0)
-        result = sharpened.astype(np.float32) / 255.0
-        steps.append("Unsharp Mask")
+    # Mild unsharp mask — always applied to restore detail lost by ML smoothing
+    u8 = (result * 255).astype(np.uint8)
+    blurred = cv2.GaussianBlur(u8, (0, 0), 1.5)
+    sharpened = cv2.addWeighted(u8, 1.3, blurred, -0.3, 0)
+    result = sharpened.astype(np.float32) / 255.0
+    steps.append("Sharpen")
 
     if steps:
         logger.step(5, "ClassicFinisher", " + ".join(steps), {}, {}, 0)
