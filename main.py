@@ -136,9 +136,9 @@ def run_photon(config=None):
     # ── List images from Drive ───────────────────────────
     files = []
     if drive_svc:
-        from pixeliar.gdrive import GDriveIO, extract_folder_id
+        from pixeliar.gdrive import GDriveIO
         gdrive = GDriveIO(drive_svc, rate_limit=cfg["rate_limit_sleep"])
-        folder_id = extract_folder_id(cfg["source_gdrive_url"])
+        folder_id = GDriveIO.extract_folder_id(cfg["source_gdrive_url"])
         files = gdrive.list_images(folder_id, cfg["recursive_folder_scan"])
         logger.drive_op("list", f"{len(files)} images found")
     else:

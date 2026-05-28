@@ -82,6 +82,7 @@ def _load_retinex(config, logger):
     repo_dir = os.path.join(config["weights_dir"], "Retinexformer")
     if not os.path.exists(repo_dir):
         import subprocess
+        subprocess.run(["pip", "install", "-q", "basicsr"], check=True)
         subprocess.run([
             "git", "clone", "--depth", "1",
             "https://github.com/caiyuanhao1998/Retinexformer",
@@ -147,6 +148,8 @@ def _load_csrnet(config, logger):
 
 def _load_nafnet(config, logger):
     """NAFNet — denoise + deblur via nafnetlib."""
+    import subprocess
+    subprocess.run(["pip", "install", "-q", "nafnetlib"], check=True)
     from nafnetlib import DenoiseProcessor, DeblurProcessor
 
     model_dir = config.get("nafnet_model_dir", "/content/pixeliar_nafnet_weights")
@@ -165,6 +168,7 @@ def _load_restormer(config, logger):
     repo_dir = os.path.join(config["weights_dir"], "Restormer")
     if not os.path.exists(repo_dir):
         import subprocess
+        subprocess.run(["pip", "install", "-q", "basicsr"], check=True)
         subprocess.run([
             "git", "clone", "--depth", "1",
             "https://github.com/swz30/Restormer",
