@@ -52,8 +52,9 @@ CONFIG = {
     "ml_blend": 0.4,
     # OUTPUT
     "jpeg_output_quality": JPEG_QUALITY,
-    "csrnet_strength": 0.5,
     "save_thumbnails": False,
+    # CLASSICAL GRADING
+    "grade_enabled": True,
     # RUNTIME
     "load_restormer": False,
     "nafnet_model_dir": "/content/pixeliar_nafnet_weights",

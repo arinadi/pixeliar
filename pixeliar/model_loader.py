@@ -253,14 +253,6 @@ def load_all_models(config, logger):
     except Exception as e:
         logger.p("FAIL", f"DeepWB load failed: {e}", indent=1)
 
-    # CSRNet
-    try:
-        m = _load_csrnet(config, logger)
-        models["csrnet"] = m
-        logger.model_loaded("CSRNet", _count_params(m), _vram_mb() - vram_start)
-    except Exception as e:
-        logger.p("FAIL", f"CSRNet load failed: {e}", indent=1)
-
     # NAFNet
     try:
         denoise, deblur = _load_nafnet(config, logger)

@@ -1,87 +1,53 @@
 """
 pixeliar — Orchestrator (Module 15)
-Pipeline chain router. Hard-coded execution order (NOT configurable).
+Hybrid pipeline: Classical CV (full res) + ML (512px, severe cases only).
 """
 
 import numpy as np
+from .triage import TriageEngine
+from .colorgrade import grade
 from .wrappers import (
-    run_iat, run_retinexformer, run_deepwb, run_csrnet,
-    run_nafnet_denoise, run_nafnet_deblur, run_restormer,
+    run_retinexformer, run_nafnet_denoise, run_nafnet_deblur,
     run_classic_finisher,
 )
 from .resolution import apply_delta_pipeline
 
 
 def orchestrate(img_np, triage, config, models, logger):
-    """Route image through pipeline based on triage results.
+    """Route image through hybrid pipeline.
     Returns: (result_np, list_of_steps_applied)
     """
     result = img_np.copy()
     steps_applied = []
     thresholds = config.get("thresholds", {})
 
-    # ── Step 1: Exposure Correction ─────────────────────
-    severe_dark = thresholds.get("severe_dark_lum", 40)
-    dark = thresholds.get("dark_lum", 60)
-    bright = thresholds.get("bright_lum", 190)
+    # ── Phase 1: Classical Color Grading (full res) ──────
+    triage_engine = TriageEngine(config)
+    grade_params = triage_engine.compute_grade_params(triage)
+    result, grade_steps = grade(result, grade_params, logger)
+    steps_applied.extend(grade_steps)
 
-    if triage["mean_lum"] < severe_dark:
-        # Severe dark → Retinexformer replaces IAT
-        if "retinex" in models:
-            process_fn = lambda img, cfg, log: run_retinexformer(img, models["retinex"], cfg, log)
-            result = apply_delta_pipeline(result, process_fn, config, logger)
-            steps_applied.append("Retinexformer")
-        else:
-            logger.p("WARN", "Retinexformer not loaded, skipping", indent=1)
-    elif triage["mean_lum"] < dark or triage["mean_lum"] > bright:
-        # Under/over exposed → IAT
-        if "iat" in models:
-            process_fn = lambda img, cfg, log: run_iat(img, models["iat"], cfg, log)
-            result = apply_delta_pipeline(result, process_fn, config, logger)
-            steps_applied.append("IAT")
-        else:
-            logger.p("WARN", "IAT not loaded, skipping", indent=1)
+    # ── Phase 2: ML Refinement — Severe Cases Only ──────
+    severe_thresh = thresholds.get("severe_dark_lum", 40)
 
-    # ── Step 2: White Balance ───────────────────────────
-    wb_threshold = thresholds.get("wb_cast_threshold", 8.0)
-    # wb_dev is in 0-255 scale, threshold in 0-1 scale → multiply
-    if triage["wb_dev"] > wb_threshold * 255:
-        if "deepwb" in models:
-            process_fn = lambda img, cfg, log: run_deepwb(img, models["deepwb"], cfg, log)
-            result = apply_delta_pipeline(result, process_fn, config, logger)
-            steps_applied.append("DeepWB")
-        else:
-            logger.p("WARN", "DeepWB not loaded, skipping", indent=1)
-
-    # ── Step 3: CSRNet — Always ────────────────────────
-    if "csrnet" in models:
-        process_fn = lambda img, cfg, log: run_csrnet(img, models["csrnet"], cfg, log)
+    # Severe dark → Retinexformer (ML exposure recovery)
+    if triage["mean_lum"] < severe_thresh and "retinex" in models:
+        process_fn = lambda img, cfg, log: run_retinexformer(img, models["retinex"], cfg, log)
         result = apply_delta_pipeline(result, process_fn, config, logger)
-        steps_applied.append("CSRNet")
+        steps_applied.append("Retinexformer")
 
-    # ── Step 4: Denoise / Deblur ───────────────────────
-    if triage["noise_flag"] and triage["blur_flag"]:
-        if config.get("load_restormer") and "restormer" in models:
-            process_fn = lambda img, cfg, log: run_restormer(img, models["restormer"], cfg, log)
-            result = apply_delta_pipeline(result, process_fn, config, logger)
-            steps_applied.append("Restormer")
-        elif "naf_denoise" in models:
-            process_fn = lambda img, cfg, log: run_nafnet_denoise(img, models["naf_denoise"], cfg, log)
-            result = apply_delta_pipeline(result, process_fn, config, logger)
-            steps_applied.append("NAFNet-SIDD")
-    elif triage["noise_flag"]:
-        if "naf_denoise" in models:
-            process_fn = lambda img, cfg, log: run_nafnet_denoise(img, models["naf_denoise"], cfg, log)
-            result = apply_delta_pipeline(result, process_fn, config, logger)
-            steps_applied.append("NAFNet-SIDD")
-    elif triage["blur_flag"]:
-        if "naf_deblur" in models:
-            process_fn = lambda img, cfg, log: run_nafnet_deblur(img, models["naf_deblur"], cfg, log)
-            result = apply_delta_pipeline(result, process_fn, config, logger)
-            steps_applied.append("NAFNet-REDS")
+    # ── Phase 3: ML Denoise / Deblur (only if flagged) ──
+    if triage["noise_flag"] and "naf_denoise" in models:
+        process_fn = lambda img, cfg, log: run_nafnet_denoise(img, models["naf_denoise"], cfg, log)
+        result = apply_delta_pipeline(result, process_fn, config, logger)
+        steps_applied.append("NAFNet-SIDD")
 
-    # ── Step 5: Classic Finisher — Post-ML ──────────────
-    from .triage import TriageEngine
+    if triage["blur_flag"] and "naf_deblur" in models:
+        process_fn = lambda img, cfg, log: run_nafnet_deblur(img, models["naf_deblur"], cfg, log)
+        result = apply_delta_pipeline(result, process_fn, config, logger)
+        steps_applied.append("NAFNet-REDS")
+
+    # ── Phase 4: Final Polish (full res) ─────────────────
     post_triage = TriageEngine(config).analyze(result)
     result, cf_steps = run_classic_finisher(result, post_triage, config, logger)
     steps_applied.extend(cf_steps)

@@ -132,6 +132,55 @@ class TriageEngine:
 
         return noise_ratio > 0.10
 
+    def compute_grade_params(self, metrics):
+        """Convert triage metrics to color grading parameters.
+        Returns dict with 1-letter keys matching DEFAULT_GRADE.
+        """
+        from .colorgrade import DEFAULT_GRADE
+        params = dict(DEFAULT_GRADE)
+
+        lum = metrics["mean_lum"]
+        wb_dev = metrics["wb_dev"]  # 0-255 scale
+        contrast = metrics["contrast_std"]
+
+        # Brightness + shadows
+        if lum < 60:
+            params["b"] = 15
+            params["d"] = 20
+        elif lum > 180:
+            params["b"] = -10
+            params["h"] = -15
+
+        # White balance warmth correction
+        cast = metrics.get("wb_cast", "neutral")
+        if wb_dev > 15:
+            if cast == "warm":
+                params["w"] = -min(int(wb_dev * 0.5), 40)
+            elif cast == "cool":
+                params["w"] = min(int(wb_dev * 0.5), 40)
+            elif cast == "green":
+                params["t"] = 10
+            elif cast == "magenta":
+                params["t"] = -10
+
+        # Contrast
+        if contrast < 40:
+            params["c"] = 1.15
+            params["k"] = -8
+            params["n"] = 5
+        elif contrast > 80:
+            params["c"] = 0.95
+
+        # Noise: slight desaturation hides noise
+        if metrics.get("noise_flag", False):
+            params["s"] = 0.95
+
+        # Always mild sharpen + clarity
+        params["p"] = 1.2
+        params["l"] = 5
+
+        return params
+
     def get_no_correction_needed(self, metrics):
         """Check if image needs no correction at all."""
         thresholds = self.thresholds
